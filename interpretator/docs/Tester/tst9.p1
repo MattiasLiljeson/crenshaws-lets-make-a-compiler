@@ -1,0 +1,53 @@
+###PROGRAM###
+    1
+##BLOCK##
+  0 -1  1  1   44
+#DEKLARATIONER#
+   19    1    0    0    0    0    0  **   #   I
+#KOD#
+    2    7    Line#
+    3    7    Line#
+   19    1    I
+    6    5    :=
+    5    2    5
+    1    5    ;
+    4    7    Line#
+   20    1    write
+    2    5    (
+   19    1    I
+    3    5    )
+    1    5    ;
+    5    7    Line#
+   21    1    writln
+    1    5    ;
+    6    7    Line#
+   19    1    I
+    6    5    :=
+   22    1    readint
+    1    5    ;
+    7    7    Line#
+   20    1    write
+    2    5    (
+   19    1    I
+    3    5    )
+    1    5    ;
+    8    7    Line#
+   21    1    writln
+    1    5    ;
+    9    7    Line#
+   20    1    write
+    2    5    (
+   19    1    I
+   13    5    +
+   22    1    readint
+   14    5    -
+    2    2    2
+    3    5    )
+    1    5    ;
+   10    7    Line#
+   21    1    writln
+    1    5    ;
+   11    7    Line#
+    2    1    end
+##BLOCKSLUT##
+###PROGRAMSLUT###

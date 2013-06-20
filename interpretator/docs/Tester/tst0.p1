@@ -1,0 +1,11 @@
+###PROGRAM###
+    1
+##BLOCK##
+  0 -1  0  0    3
+#DEKLARATIONER#
+#KOD#
+    2    7    Line#
+    3    7    Line#
+    2    1    end
+##BLOCKSLUT##
+###PROGRAMSLUT###

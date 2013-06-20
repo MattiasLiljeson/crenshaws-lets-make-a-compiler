@@ -1,0 +1,37 @@
+###PROGRAM###
+    1
+##BLOCK##
+  0 -1  2  2   27
+#DEKLARATIONER#
+   19    1    0    0    0    0    0  **   #   I
+   20    1    0    0    0    0    1  **   #   K
+#KOD#
+    2    7    Line#
+    3    7    Line#
+    4    7    Line#
+    5    7    Line#
+    6    7    Line#
+   19    1    I
+    6    5    :=
+    2    2    2
+    1    5    ;
+    7    7    Line#
+   20    1    K
+    6    5    :=
+    3    2    3
+    1    5    ;
+    8    7    Line#
+   19    1    I
+    6    5    :=
+   19    1    I
+   13    5    +
+   20    1    K
+   15    5    *
+   19    1    I
+   14    5    -
+   20    1    K
+    1    5    ;
+    9    7    Line#
+    2    1    end
+##BLOCKSLUT##
+###PROGRAMSLUT###

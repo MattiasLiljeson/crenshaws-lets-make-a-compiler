@@ -1,0 +1,26 @@
+/* *******************************************************
+	Interpretator
+Detta är huvudklassen i en enkel interpretator
+Den startar med att göra en lexikalisk analys och deklarationsanalys.
+Den har en filhanterare som utgör inmatningsexperten, denna
+hanterar förutom filnamn även lite annat och duger även
+till en kompilator. Här är dess funktion inte av intresse.
+Vi skapar ett objekt av typ Struct för att representera
+resultatet av lex och decl analysen.
+Lex är en lexanalysator och pass1 gör block&dekl analysen.
+Därefter görs interpreteringen av Ipass2, som har resultatet 
+av tidigare analys som inparameter.
+   OBS. Res bygger ni från p1-filen och ni gör sedan Ipass2
+******************************************************* */
+class Itpr
+{	public static void main(String[] args)
+	{	Filhantering Fil;
+		lex LX; Struct Res; pass1 P1; Ipass2 P2;
+		System.out.println("Interpreterar");
+		Fil=new Filhantering(args,0);
+		Res=new Struct();
+		LX=new lex(Res,Fil);
+		P1=new pass1(LX,Res);
+                P2=new Ipass2(Res);
+	}
+}

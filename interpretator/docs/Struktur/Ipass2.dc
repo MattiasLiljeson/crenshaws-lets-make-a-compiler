@@ -1,0 +1,197 @@
+/* ********************************************************************
+	Interpretatorns huvudklass
+Här görs interpreteringen av programmet i "p1-format"
+Denna kod har genererats från en kompilatorversion varför en del metoder
+heter CompXxx när det borde varit InterXxx.
+
+
+******************************************************************** */
+class Ipass2
+{	
+	static final int M_Local=0,M_Block=1,M_Template=2,M_Sys=3,M_Litadr=4,M_Ext=5;
+
+	
+	Struct IO;	// Objekt som håller p1-koden(dekl och tokens)
+	MyControl Ctrl;	// Objekt som definierar regler i OpPrec
+	RTEnv Env;	// Objekt som motsvarar programmets "minne"
+	OpPrec Prec;	// Objekt som gör OpPrec interpretering
+                        // Konstruktorn initialiserar dessa
+	
+	public Ipass2(Struct I)
+	{	
+		IO=I;
+		Ctrl=new MyControl();
+		Env=new RTEnv();
+		Prec=new OpPrec(IO,Ctrl,Env,this);
+		CompEnv();
+		Env.Finish();
+	}
+	
+	/* ****************************************************
+	*		Private methods doing the recursive descent
+	*		translation
+	* ************************************************** */
+	
+	/* *****  Set up Environment  *****
+	* Setting up the environment of the
+	* user written program, init interpreter.
+	* ******************************** */
+	private void CompEnv()
+        {  CompBlock(0);	// Just interpret outermost block
+	}
+	/* *****  Interpret Block  *****
+	* Interpreting one block of the
+	* user written program.
+	* ******************************** */
+	private void CompBlock(int Nr)
+	{	Symbol Sym;
+		int Size;		
+		Size=IO.GetSize(Nr);
+		Env.Enter(Nr,Size);
+		Env.Allocate(Nr,Size);
+		Env.Execute();
+		InterBlock(Nr,-1);
+		Env.Retur();
+		
+	}
+	public void InterBlock(int N,int sf)
+	{	Token T; boolean Slut;
+		IO.InitBlock(N);
+		Prec.InitBlock(N);
+		T=GetToken();
+		Slut=false;
+		while(!Slut)
+		{  if(T==null){Slut=true;}
+		   else
+		   if(T.End()){Slut=true;}
+		   else {T=CompSats(T);}
+		   T=GetToken();
+		}
+		// Blocket färdiginterpreterat
+		if(sf==-1){} // Det var det yttersta, färdigt!
+		else
+		{  IO.ContBlock(sf);  //Säg till IO att vi återvänder
+		   Prec.InitBlock(sf);// Säg till OpPrec att vi återvänder
+		}
+	}
+	/* *****  Interpret Statement  *****
+	* Interpreting one statement of the
+	* user written program.
+	* ******************************** */
+	private Token CompSats(Token T)
+	{	
+		if(T.If()){T=CompIf();}
+		else
+		if(T.CallBlock()){CompBCall(T);}
+		else
+		if(T.Error()){CompError(T);}
+		else
+		if(T.Begin())
+		{	T=GetToken();
+			while(!T.End())
+			{	T=CompSats(T);
+			}
+			T=GetToken();
+		}
+		else
+		if(T.UserId()){T=Prec.CompExpr(T);}
+		else
+		if(T.Semi()){T=CompEmpty();}
+		else {Error();}
+		return T;
+	}
+	private Token SkipSats(Token T)
+	{	
+		if(T.If()){T=SkipIf();}
+		if(T.CallBlock()){T=GetToken();}
+		else
+		if(T.Error()){T=GetToken();}
+		else
+		if(T.Begin())
+		{	T=GetToken();
+			while(!T.End())
+			{	T=SkipSats(T);
+			}
+			T=GetToken();
+		}
+		else
+		if(T.UserId())
+		{  while(!T.Semi()&&!T.End()&&!T.Else()){T=GetToken();}
+		}
+		else
+		if(T.Semi()){T=GetToken();}
+		else {Error();}
+		return T;
+	}
+	/* *****  Compile IfStatement  *****
+	* Compiling one if-statement of the
+	* user written program.
+	* ******************************** */
+	private Token CompIf()
+	{	Token T;
+		int L1,L2;  // Kvar från kompilering behövs inte!
+		L1=GenLab();
+		L2=GenLab();
+		T=Prec.CompJumpFalse(L1);
+		if(T.Then()){T=GetToken();}else{Error();}
+		if(!Env.Condition())
+		{	System.out.println("Then");
+			T=CompSats(T);
+			if(T.Else()){T=GetToken();}else{Error();}
+			T=SkipSats(T);
+		}
+		else
+		{	System.out.println("Else");
+			T=SkipSats(T);
+			if(T.Else()){T=GetToken();}else{Error();}
+			T=CompSats(T);
+		}
+		return T;
+	}
+	private Token SkipIf(){.......................}
+	/* *****  Compile BlockCall  *****
+	* Compiling the call of a block. The block
+	* used as a statement in user written program.
+	* ******************************** */
+	private Token CompBCall(Token T)
+	{	int Nr,Sf;
+		Nr=T.GetBlkNr();
+		Sf=IO.GetSF(Nr);
+		Env.Enter(Nr,IO.GetSize(Nr));
+		Env.Allocate(Nr,0);
+		Env.Execute();
+		InterBlock(Nr,Sf);
+		Env.Retur();
+		Env.DeAllocate();
+		return T;
+	}
+
+	/* *****  Compile EmptyStatement  *****
+	* Compiling an empty statement
+	* 
+	* ******************************** */
+	private Token CompEmpty()
+	{return null;}
+	
+	/* *****  Compile Error  *****
+	* Compiling an error found in pass 1
+	* This is regarded as a statement.
+	* ******************************** */
+	private Token CompError(Token T)
+	{	Env.Error(); // Do something better!
+		return null;
+	}
+	
+	/* **** Interface to other objects **** */
+	private Token GetToken()
+	{	Token T;
+		T=(Token)(IO.GetToken());
+		return T;
+	}
+	
+	/* *************** Help Routines (Används inte)************** */
+	private int LabNr=-1;
+	private int GenLab(){LabNr=LabNr+1; return LabNr;}
+	private void Error(){}
+	
+}

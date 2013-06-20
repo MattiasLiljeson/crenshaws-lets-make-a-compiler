@@ -1,0 +1,33 @@
+/* ***************************************************************************
+	Run Time Environment
+Här definieras det interpreterade programmets minne och den struktur
+som behövs.
+*************************************************************************** */
+
+class RTEnv
+{
+	private static final int SF=0,DF=1,PF=2,PC=3,From=4,TP=5,Size=6;
+	private AR[] Stack=new AR[100];
+	private Template[] Templates=new Template[100];
+	private int[] Temporary=new int[20];
+	private int Cur=0;
+	private boolean Cond;
+	class AR
+	{	int[]Mem;
+		AR(int sz){Mem=new int[Size+sz];}
+		void SetFrom(){}
+		void Init(int sf,int pc){Mem[SF]=sf;Mem[DF]=Cur;Mem[PC]=pc;}
+		int GetSF(){return Mem[SF];}
+		int GetDF(){return Mem[DF];}
+		int GetVal(int r){return Mem[Size+r];}
+		void SetVal(int r, int v){Mem[Size+r]=v;}
+	}
+	class Template
+	{	int BlkNr,Size;
+		Template(int nr,int s){BlkNr=nr; Size=s;}
+	}
+	RTEnv()
+	{	Stack[0]=new AR(0);
+	}
+....................................................
+}

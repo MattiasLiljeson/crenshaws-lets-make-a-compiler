@@ -1,0 +1,546 @@
+import komp.*;
+class OpPrec extends OperatorPrecedence
+{
+	static final int AM_Become=1,AM_New=2,AM_Add=3,AM_Mul=4,AM_Cmp=5,AM_Func=6;
+	static final int AM_Array=7,AM_Class=8,AM_Comma=9,AM_Lpar=10,AM_Rpar=11;
+	static final int AM_Fpar=12,AM_Dot=13,AM_Empty=14;
+	
+	static final int K_Simple=0,K_Array=1,K_Func=2,K_Funcval=3,K_Class=4,K_Ref=5;
+	
+	static final int TC_Plus=13,TC_Minus=14,TC_Mul=15,TC_Div=16;
+	
+	static final int C_Asis=0,C_Any=0,C_Void=0;
+	static final int C_Integer=1,C_Real=2,C_Boolean=4,C_Text=3,C_Pointer=5;
+	static final int C_G0=0,C_G5=5,C_O0=8,C_O1=9,C_O2=10,C_O3=11,C_Sp=24;
+	/* ************************************************
+	*		Intermediate Code
+	*
+	************************************************ */
+	static final int M_Ar=0,M_Arp=1,M_Arr=2,M_Tmp=3,M_Lit=4,M_Reg=5;
+	static final int M_Unspec=0,M_Readint=1,M_Readreal=2,M_Readtext=7;
+	static final int M_Writeint=3,M_Writereal=4,M_Writetext=5,M_Writeln=6;
+	static final int M_Local=0,M_Block=1,M_Template=2,M_Sys=3,M_Litadr=4;
+	
+	/* *** Operator Codes *** */
+	static final int OP_Move=1,OP_Neg=2,OP_Not=3;
+	static final int OP_Add=4,OP_Sub=5,OP_Mul=6,OP_Div=7,OP_Idiv=8;
+	static final int OP_Or=9,OP_Xor=10,OP_And=11;
+	static final int OP_Ge=12,OP_Gt=13,OP_Le=14,OP_Lt=15,OP_Eq=16,OP_Ne=17;
+	static final int OP_Jge=18,OP_Jgt=19,OP_Jle=20,OP_Jlt=21,OP_Jeq=22,OP_Jne=23;
+	static final int OP_Jmpz=24,OP_Jmpnz=25,OP_Jmpnone=26,OP_Jmpsome=27;
+	static final int OP_Jmp=28,OP_Label=29;
+	static final int OP_Word=30,OP_Adr=32,OP_Lit=33;
+	static final int OP_Eref=34,OP_Edef=35;
+	static final int OP_All=36,OP_Exec=37,OP_Dall=38,OP_Ret=39,OP_Error=40;
+	static final int OP_Start=41,OP_End=42,OP_Jmpr=43,OP_Jmpret=44;
+	static final int OP_Alim=45,OP_Aall=46,OP_Aadr=47,OP_Aind=48;
+	static final int OP_Save=49,OP_Restore=50;
+	static final int OP_Oall=51,OP_Ocrea=52,OP_Mall=53,OP_Oexit=54;
+	
+	private int LitId=-1,TempNr=-1;
+	Struct IO;
+	Op LastInputOp;
+	SymSearch SM;
+	Ipass2 Rec;
+	RTEnv Env;
+	/* *******************************************************************
+	*		Constructor
+	******************************************************************* */
+	OpPrec(Interface I,Control C,RTEnv V,Ipass2 RD)
+	{	super(I,C);
+		Env=V;
+		Rec=RD;
+		IO=(Struct)I;
+		SM=new SymSearch(IO);
+	}
+	/* *******************************************************************
+	*		Recursive descent interface to translating routines.
+	******************************************************************* */
+	public void InitBlock(int N){SM.SetBlock(N);}
+
+	public Token CompExpr(Token T)
+	{	LastInputOp=null;
+		ResetTemp();
+		return (Token)Translate(T);
+	}
+	
+	public Token CompJumpFalse(int L)
+	{	Op P;
+		Token T;
+		LastInputOp=null;
+		P=new Lab(null,M_Local,L);
+		PutOperand((Operand)P);
+		ResetTemp();
+		return (Token)Translate(IO.GetToken());
+	}
+
+	/* *******************************************************************
+	*		MakeOp
+	*	This routine is used to translate a token into an Op 
+	*	(Operand or Operator)
+	******************************************************************* */
+	public Op MakeOp(Lexeme L)
+	{	Token T;
+		Op P;
+		int K; char Ch;
+		T=(Token) L;
+		K=T.GetType();
+		if(T.Id())
+		{	if(T.Reserved())
+			{	if(T.New()){P=TheNewOp;}
+				else{P=TheStop;}
+			}
+			else
+			if(LastInputOp instanceof Dot){P=OSearch(T,GetTopOperand());}
+			else {P=DSearch(T);}
+		}
+		else
+		if(T.Literal())
+		{	int Id;
+			Id=GenLit();
+			if(T.Fix()){K=C_Integer;}
+			else
+			if(T.Float()){K=C_Real;}
+			else
+			if(T.Text()){K=C_Text;}
+			else{K=0;}
+			P=new Literal(T.GetName(),K,Id);
+		}
+		else
+		if(T.Op())
+		{	if(T.Become()){P=new Become();}
+			else
+			if(T.Arithm()){P=new ArithmOp(T);}
+			else
+			if(T.Comp()){P=new Compare(T);}
+			else
+			if(T.Semi()){P=TheStop;}
+			else
+			if(T.Lpar()){P=TheLpar;}
+			else
+			if(T.Rpar()){P=TheRpar;}
+			else
+			if(T.Comma()){P=TheComma;}
+			else
+			if(T.Dot()){P=TheDot;}
+			else{P=null;}
+		}
+		else{P=null;}
+		Ch=FollowOp(LastInputOp,P);
+		if(Ch=='A'){LastInputOp=P;}else{P=FollowError(Ch,P);}
+		return P;
+	}
+	
+	private char FollowOp(Op Q1,Op Q2)
+	{	int I1,I2;
+		if(Q1!=null){I1=Q1.GetIndex();}else{I1=AM_Empty;}
+		if(Q2!=null){I2=Q2.GetIndex();}else{I2=AM_Empty;}
+		return ((MyControl)Ctrl).FollowOp(I1,I2);
+	}
+	
+	private MyOperand MakeResOp(MyOperand P1,MyOperand P2,int C)
+	{	int Typ,Ty1,Ty2,Md1,Md2;
+		char Md,Ty;
+		MyOperand P;
+		Ty1=P1.GetType();
+		Ty2=P2.GetType();
+		Ty=ResType(Ty1,Ty2);
+		if(Ty=='I'){if(C==TC_Div){Typ=C_Real;}else{Typ=C_Integer;}}
+		else
+		if(Ty=='R'){Typ=C_Real;}
+		else
+		if(Ty=='T'||Ty=='B'||Ty=='P'){Typ=C_Any; /*Error("Illegal type");*/}
+		else
+		if(Ty=='E'){Typ=C_Any; /*Error("Incompatible types");*/}
+		else
+		if(Ty=='A'){Typ=C_Any;}
+		else{Typ=C_Any;}
+		Md1=P1.GetMode();
+		Md2=P2.GetMode();
+		Md=GetResMode(Md1,Md2);
+		if(Md=='N'){P=new Temporary(null,Typ,GetNewTemporary());}
+		else
+		if(Md=='F'){P=P1;}
+		else
+		if(Md=='R'){P=P1; ReleaseTemp();}
+		else
+		if(Md=='S'){P=P2;}
+		else
+		if(Md=='L'){P=MakeLit((Literal)P1,(Literal)P2,C);}
+		else
+		if(Md=='A'){P=new Temporary(null,Typ,P1.GetGarp());}
+		else
+		if(Md=='B'){P=new Temporary(null,Typ,P2.GetGarp());}
+		else
+		if(Md=='D'){P=new Temporary(null,Typ,P1.GetGarp()); ReleaseTemp();}
+		else{P=null;}
+		return P;
+	}
+	
+	private Literal MakeLit(Literal Q1,Literal Q2,int C)
+	{	int K1,K2,RI=0,Id;
+		double RR=0.0;
+		boolean IsInt=true;
+		Literal R;
+		String V;
+		K1=Q1.GetType();
+		K2=Q2.GetType();
+		if(K1==C_Integer)
+		{	int V1;
+			V1=Q1.GetIntVal();
+			if(K2==C_Integer)
+			{	int V2;
+				V2=Q2.GetIntVal();
+				IsInt=C!=OP_Div;
+				if(C==TC_Plus){RI=V1+V2;}
+				else
+				if(C==TC_Minus){RI=V1-V2;}
+				else
+				if(C==TC_Mul){RI=V1*V2;}
+				else
+				if(C==TC_Div){RR=V1/V2;}
+				else{RI=Integer.MAX_VALUE;}
+			}
+			else
+			if(K2==C_Real)
+			{	double V2;
+				V2=Q2.GetRealVal();
+				IsInt=false;
+				if(C==TC_Plus){RR=V1+V2;}
+				else
+				if(C==TC_Minus){RR=V1-V2;}
+				else
+				if(C==TC_Mul){RR=V1*V2;}
+				else
+				if(C==TC_Div){RR=V1/V2;}
+				else{RR=Float.MAX_VALUE;}
+			}
+		}
+		else
+		if(K1==C_Real)
+		{	double V1;
+			V1=Q1.GetRealVal();
+			if(K2==C_Integer)
+			{	int V2;
+				V2=Q2.GetIntVal();
+				IsInt=false;
+				if(C==TC_Plus){RR=V1+V2;}
+				else
+				if(C==TC_Minus){RR=V1-V2;}
+				else
+				if(C==TC_Mul){RR=V1*V2;}
+				else
+				if(C==TC_Div){RR=V1/V2;}
+				else{RR=Float.MAX_VALUE;}
+			}
+			else
+			if(K2==C_Real)
+			{	double V2;
+				V2=Q2.GetRealVal();
+				IsInt=false;
+				if(C==TC_Plus){RR=V1+V2;}
+				else
+				if(C==TC_Minus){RR=V1-V2;}
+				else
+				if(C==TC_Mul){RR=V1*V2;}
+				else
+				if(C==TC_Div){RR=V1/V2;}
+				else{RR=Float.MAX_VALUE;}
+			}
+			else{}
+		}
+		else {}
+		Id=GenLit();
+		if(IsInt)
+		{	R=new Literal(""+RI,C_Integer,Id);
+		}
+		else
+		{	R=new Literal(""+RR,C_Real,Id);
+		}
+		return R;
+	}
+	private char ResType(int Ty1,int Ty2)
+	{return ((MyControl)Ctrl).GetResType(Ty1,Ty2);}
+	private char GetResMode(int M1,int M2)
+	{return ((MyControl)Ctrl).GetResMode(M1,M2);}
+	
+	
+	public Operator NewFunPar(Operator P)
+	{return new FunPar(P);}
+	
+	/* *******************************************************************
+	*
+	******************************************************************* */
+	Op DSearch(Token T)
+	{	int Sid,Level;
+		Symbol S;
+		Op P;
+		P=null;
+		Sid=T.GetId();
+		S=SM.Search(Sid);
+		Level=SM.GetLevel();
+		if(S==null)
+		{	SysSymbol SS;
+			SS=SM.StdSearch(T.GetName());
+		}
+		else
+		{	int K;
+			K=S.GetKind();
+			if(K==K_Simple||K==K_Ref){P=new ActivationRecord(S,M_Ar,Level);}
+			else
+			if(K==K_Funcval)
+			{	if(LeftVar()){P=new ActivationRecord(S,M_Ar,Level);}
+				else
+				{	S=SM.ContSearch(Sid);
+					K=S.GetKind();
+					Level=SM.GetLevel();
+					if(K==K_Func){P=new UserFunction(S,0,Level);}
+				}
+			}
+			else
+			else{P=null;}
+		}
+		return P;
+	}
+	
+
+	
+	Op GetPar(int BlkId,int Nr)
+	{	Symbol S;
+		Op P;
+		S=SM.ParSearch(BlkId,Nr);
+		P=new Parameter(S,0,0);
+		return P;
+	}
+	
+	private Op FollowError(char C,Op P)
+	{	return null;
+	}
+	private boolean LeftVar(){return Empty();}
+	private int GenLit(){LitId=LitId+1; return LitId;}
+	private int GetNewTemporary(){TempNr=TempNr+1; return TempNr;}
+	private int GetCurTemporary(){return TempNr;}
+	private void ReleaseTemp(){TempNr=TempNr-1;}
+	private void ResetTemp(){TempNr=-1;}
+	
+	
+	/* *******************************************************************
+	*		Definition of Operands and Operators
+	*	A type hierarchy of operators and operands is defined.
+	*
+	*	Op
+	*		Operand
+	*			ActivationRecord
+	*			Temporary
+	*			Register
+	*			Literal
+	*			Label
+	*		Operator
+	*
+	******************************************************************* */
+	private Lpar TheLpar=new Lpar();
+	private Rpar TheRpar=new Rpar();
+	private Stop TheStop=new Stop();
+	private Comma TheComma=new Comma();
+	private NewOp TheNewOp=new NewOp();
+	private Dot TheDot=new Dot();
+
+	
+	class MyOperand extends Operand
+	{	int Mode,Garp,Rel,Type;
+		Symbol Sym;
+		public int GetIndex(){return 0;}
+		public int GetType(){return Type;}
+		public int GetMode(){return Mode;}
+		public int GetGarp(){return Garp;}
+		public int GetQual()
+		{if(Sym!=null){return Sym.GetQual();}else{return -1;}}
+		public void SetType(int Ty){Type=Ty;}
+		public void Address(){}
+		public Adr Address(int d)
+		{	return new Adr(Mode,Garp,Rel,Type);
+		}
+	}
+	
+	class ActivationRecord extends MyOperand
+	{	
+		ActivationRecord(Symbol S,int Tp,int Lev)
+		{	Sym=S;
+			Mode=Tp;
+			Garp=Lev;
+			Rel=S.GetRel();
+			Type=S.GetType();
+		}
+	}
+	
+	class Parameter extends MyOperand
+	{	
+		Parameter(Symbol S,int Tp,int Noll)
+		{	if(S!=null)
+			{	Sym=S;
+				Mode=M_Ar;
+				Garp=-1;
+				Rel=S.GetRel();
+				Type=S.GetType();
+			}
+			else
+			{	Sym=null;
+				Mode=M_Ar;
+				Garp=-1;
+				Rel=Noll;
+				Type=Tp;
+			}
+		}
+	}
+	
+	class Temporary extends MyOperand
+	{	
+		Temporary(Symbol S,int Tp,int N)
+		{	Sym=S;
+			Mode=M_Tmp;
+			Garp=0;
+			Rel=N;
+			Type=Tp;
+		}
+	}
+	
+	class IndirectTemporary extends MyOperand
+	{	
+		IndirectTemporary(int Md,Symbol S,int Typ,int N)
+		{	Sym=S;
+			Mode=Md;
+			Garp=N;
+			Rel=0;
+			Type=Typ;
+		}
+		public void SetOffset(int N){Rel=N;}
+	}
+	
+	class Register extends MyOperand
+	{	
+		Register(Symbol S,int Tp,int N)
+		{	Sym=S;
+			Mode=M_Reg;
+			Garp=0;
+			Rel=N;
+			Type=Tp;
+		}
+	}
+	
+	class Literal extends MyOperand
+	{	String Val;
+		Literal(String T,int Tp,int Id)
+		{	Sym=null;
+			Mode=M_Lit;
+			Garp=0;
+			Rel=Id;
+			Type=Tp;
+			Val=T;
+		}
+		String GetVal(){return Val;}
+		int GetIntVal()
+		{if(Type==C_Integer){return Integer.parseInt(Val);}else{return 0;}}
+		double GetRealVal()
+		{if(Type==C_Real){return new Float(Val).doubleValue();}else{return 0.0;}}
+		public Adr Address(int d)
+		{	return new Adr(Mode,0,GetIntVal(),Type);
+		}
+	}
+	
+	class Lab extends MyOperand
+	{	
+		Lab(Symbol S,int LabType,int LabNr)
+		{	Sym=S;
+			Mode=-1;
+			Garp=LabType;
+			Rel=LabNr;
+			Type=-1;
+		}
+		public void Address()
+		{
+		}
+		public Adr Address(int d)
+		{	return new Adr(Mode,Garp,Rel,Type);
+		}
+	}
+	
+	abstract class ConstOperator extends Operator
+	{	public void Exec(){}
+		public void Prolog(Op P){}
+	}
+	class Lpar extends ConstOperator
+	{	public int GetIndex(){return AM_Lpar;}}
+	class Rpar extends ConstOperator
+	{	public int GetIndex(){return AM_Rpar;}}
+	class NewOp extends ConstOperator
+	{	public int GetIndex(){return AM_New;}}
+	class Stop extends ConstOperator
+	{	public int GetIndex(){return AM_Empty;}}
+	class Comma extends ConstOperator
+	{	public int GetIndex(){return AM_Comma;}}
+	class Dot extends ConstOperator
+	{	public int GetIndex(){return AM_Dot;}}
+	
+	class Become extends Operator
+	{	public int GetIndex(){return AM_Become;}
+		public void Exec()
+		{	MyOperand P1,P2;Adr A1,A2;
+			P2=(MyOperand)GetOperand();
+			P1=(MyOperand)GetOperand();
+			A2=P2.Address(0);
+			A1=P1.Address(0);
+			Env.SetValue(A1,A2);
+		}
+		public void Prolog(Op P){}
+	}
+	
+	class ArithmOp extends Operator
+	{	Token Tok;
+		ArithmOp(Token T){Tok=T;}
+		public int GetIndex()
+		{.........}
+		public void Exec()
+		{.............}
+		public void Prolog(Op P){}
+	}
+	
+	class Compare extends Operator
+	{	Token Tok;
+		Compare(Token T){Tok=T;}
+		public int GetIndex(){return AM_Cmp;}
+		public void Exec()
+		{.............}
+		public void Prolog(Op P){}
+	}
+	
+	class UserFunction extends Operator
+	{	int Parameters,BlockId,Type,Level;
+		Symbol Sym;
+		UserFunction(Symbol S,int Tp,int Lev) // Tp????
+		{	Sym=S;
+			Parameters=S.GetInf1();
+			BlockId=S.GetInf2();
+			Type=S.GetType();
+			Level=Lev;
+		}
+		public int GetIndex(){return AM_Func;}
+		public void Exec()
+		{............}
+		public void Prolog(Op P)
+		{	if(P==null)
+			{	int Size;
+				Size=IO.GetSize(BlockId);
+				Env.Enter(BlockId,Size);
+				Env.Allocate(BlockId,Level);
+			}
+			else{}
+		}
+	}
+
+	class FunPar extends Operator
+	{
+		
+	}
+
+	
+}
