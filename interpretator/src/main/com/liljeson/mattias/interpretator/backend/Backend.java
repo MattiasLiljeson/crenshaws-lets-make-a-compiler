@@ -1,11 +1,12 @@
+package com.liljeson.mattias.interpretator.backend;
 import java.util.ArrayList;
 
 
-public class Assembler {
+public class Backend {
 	
-	public Assembler() {
+	public Backend() {
 		m_stack = new ArrayList<Integer>();
-		m_program = new ArrayList<ProgramLine>();
+		m_program = new ArrayList<IcLine>();
 		m_pc = 0;
 		
 	}
@@ -63,7 +64,7 @@ public class Assembler {
 		m_pc = p_pc;
 	}
 	
-	public void loadProgram( ArrayList<ProgramLine> p_program ) {
+	public void loadProgram( ArrayList<IcLine> p_program ) {
 		m_program = p_program;
 	}
 	
@@ -74,7 +75,7 @@ public class Assembler {
 	}
 	
 	public Integer stepProgram() {
-		ProgramLine line = m_program.get( m_pc );
+		IcLine line = m_program.get( m_pc );
 		Instructions instr = line.getInstr();
 		Integer val = line.getVal();
 		Integer result = new Integer(-1);
@@ -115,6 +116,6 @@ public class Assembler {
 	
 	// public for ease of testing
 	public ArrayList<Integer> m_stack;
-	ArrayList<ProgramLine> m_program;
+	ArrayList<IcLine> m_program;
 	int m_pc;
 }

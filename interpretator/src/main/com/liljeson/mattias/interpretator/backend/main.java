@@ -1,3 +1,4 @@
+package com.liljeson.mattias.interpretator.backend;
 /**
  * Implementation of the stack based VM described here:
  * http://stackoverflow.com/questions/6887471/how-would-i-go-about-writing-an-interpreter-in-c
@@ -13,7 +14,7 @@ public class main {
 	 */
 	public static void main(String[] args) {
 		System.out.println("Hello! Let's he'go!");
-		Assembler stack = new Assembler();
+		Backend stack = new Backend();
 		
 		stack.loadProgram( Programs.prog1() );
 		stack.runProgram();

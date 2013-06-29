@@ -1,18 +1,20 @@
-import static org.junit.Assert.*;
+package com.liljeson.mattias.interpretator.backendtest;
 
-import java.util.ArrayList;
+import com.liljeson.mattias.interpretator.backend.*;
+
+import static org.junit.Assert.*;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 
-public class AssemblerTest {
-	Assembler m_stack;
+public class BackendTest {
+	Backend m_stack;
 	
 	@Before
 	public void setUp() throws Exception {
-		m_stack = new Assembler();
+		m_stack = new Backend();
 	}
 
 	@After
