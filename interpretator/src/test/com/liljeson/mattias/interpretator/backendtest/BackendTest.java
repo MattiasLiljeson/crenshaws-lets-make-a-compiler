@@ -63,7 +63,7 @@ public class BackendTest {
 	@Test 
 	public void testGetPcAndSetPc() {
 		Integer pc = m_stack.getPc();
-		assertEquals( "testGetPC: pc not 0 after ctor",
+		assertEquals( "testGetPC: m_pc not 0 after ctor",
 				new Integer(0), pc );
 		
 		m_stack.setPc(11);
@@ -77,13 +77,13 @@ public class BackendTest {
 		m_stack.push( 0 );
 		m_stack.ifeq( 42 );
 		Integer pc1 = m_stack.getPc();
-		assertEquals( "testIfeq: pc set after ifeq",
+		assertEquals( "testIfeq: m_pc set after ifeq",
 				new Integer(0), pc1 );
 		
 		m_stack.push( 1 );
 		m_stack.ifeq( 42 );
 		Integer pc2 = m_stack.getPc();
-		assertEquals( "testIfeq: pc not set after ifeq",
+		assertEquals( "testIfeq: m_pc not set after ifeq",
 				new Integer(42), pc2 );	
 	}
 	
@@ -91,7 +91,7 @@ public class BackendTest {
 	public void testJump() {
 		m_stack.jump( 8 );
 		Integer pc = m_stack.getPc();
-		assertEquals( "testJump: pc not set after jump",
+		assertEquals( "testJump: m_pc not set after jump",
 				new Integer(8), pc );	
 	}
 	
@@ -118,7 +118,7 @@ public class BackendTest {
 		
 		m_stack.stepProgram();
 		Integer pcAfter = m_stack.getPc();
-		assertEquals( "testLoadProgramAndRun: step not changing pc",
+		assertEquals( "testLoadProgramAndRun: step not changing m_pc",
 				new Integer( 1 ), pcAfter );
 		
 		m_stack.setPc( 0 );
@@ -135,7 +135,7 @@ public class BackendTest {
 		m_stack.runProgram();
 		Integer lineCnt = Programs.prog1().size();
 		Integer lastPc = m_stack.getPc();
-		assertEquals( "testLoadProgramAndRun: pc not set to last +1 after running",
+		assertEquals( "testLoadProgramAndRun: m_pc not set to last +1 after running",
 				lineCnt, lastPc );
 	}
 }
