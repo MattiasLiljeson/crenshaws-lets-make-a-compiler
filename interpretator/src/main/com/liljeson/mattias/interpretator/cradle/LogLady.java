@@ -23,7 +23,7 @@ public class LogLady {
 			System.out.println( new Date().toString() + ", "
 					+ p_level.toString() + ": " );
 		}
-		// System.out.println( p_msg );
+		System.out.println( p_msg );
 	}
 
 	public void write( final String p_msg ) {

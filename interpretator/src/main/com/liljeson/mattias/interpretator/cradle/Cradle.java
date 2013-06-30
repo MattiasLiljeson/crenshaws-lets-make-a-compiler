@@ -51,7 +51,8 @@ public class Cradle {
 
 	void getChar() {
 		m_look = read();
-		m_log.log( LogLevels.NONE, "; read: " + Character.toString( m_look ) );
+		m_log.log( LogLevels.NONE,
+				"; next token read to look: " + Character.toString( m_look ) );
 	}
 
 	void match( final char p_char ) {

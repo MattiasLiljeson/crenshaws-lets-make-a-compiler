@@ -24,7 +24,7 @@ public class Runner {
 		// backend.runProgram();
 
 		final Cradle cradle = new Cradle();
-		cradle.run( "-3*2/(1+4)-3*1" );
+		cradle.run( "(((1+2)*3)+4)+5" );
 
 	}
 }
