@@ -3,26 +3,29 @@ package com.liljeson.mattias.interpretator.cradle;
 import com.liljeson.mattias.interpretator.cradle.LogLady.LogLevels;
 
 public class Cradle {
-	/**
-	 * @param args
-	 */
-	// public static void main( final String[] args ) {
-	// // TODO Auto-generated method stub
-	// final Cradle cradle=new Cradle();
-	// cradle.init();
-	// cradle.expression();
-	// }
 
-	LogLady m_log = new LogLady( false );
-	CompLogger m_compLog = new CompLogger();
+	LogLady m_log = new LogLady( false, LogLevels.ERROR );
+	CompLogger m_compLog = new CompLogger( m_log );
 	Tokenizer m_tokenizer = new Tokenizer( "1+2" );
 	char m_look = '_';
 	boolean m_abort = false;
 
+	public Cradle( final LogLady p_log, final CompLogger p_compLog ) {
+		if( p_compLog != null ) {
+			m_compLog = p_compLog;
+		}
+		if( p_log != null ) {
+			m_log = p_log;
+		}
+	}
+
 	public void run( final String p_program ) {
 		m_tokenizer = new Tokenizer( p_program );
 		init();
-		expression();
+		assignment();
+		if( m_look != '\n' && m_look != '_' ) {
+			expected( "Newline, not: " + m_look );
+		}
 	}
 
 	void abort( final String p_msg ) {
@@ -103,6 +106,11 @@ public class Cradle {
 		m_log.write( "\t" + p_msg );
 	}
 
+	void emitLn( final String p_msg ) {
+
+		emitLn( p_msg, CompLogger.getCallerName( 3 ) );
+	}
+
 	void emitLn( final String p_msg, final String p_caller ) {
 		emit( p_msg + "\t\t; " + p_caller );
 		m_log.writeLn();
@@ -117,10 +125,10 @@ public class Cradle {
 	}
 
 	void term() {
-		m_compLog.push( "term()" );
+		m_compLog.push();
 		factor();
 		while( m_look == '*' || m_look == '/' ) {
-			emitLn( "MOVE D0, -(SP)", "term()" );
+			emitLn( "MOVE D0, -(SP)" );
 			switch( m_look ) {
 			case '*':
 				multiply();
@@ -128,22 +136,20 @@ public class Cradle {
 			case '/':
 				divide();
 				break;
-			default:
-				expected( "Mulop" );
 			}
 		}
 		m_compLog.pop();
 	}
 
 	void expression() {
-		m_compLog.push( "expression()" );
+		m_compLog.push();
 		if( isAddop( m_look ) ) {
-			emitLn( "CLR  D0", "expression()" );
+			emitLn( "CLR  D0" );
 		} else {
 			term();
 		}
 		while( isAddop( m_look ) ) {
-			emitLn( "MOVE D0, -(SP)", "expression()" );
+			emitLn( "MOVE D0, -(SP)" );
 			switch( m_look ) {
 			case '+':
 				add();
@@ -151,56 +157,79 @@ public class Cradle {
 			case '-':
 				subtract();
 				break;
-			default:
-				expected( "Addop" );
 			}
 		}
 		m_compLog.pop();
 	}
 
+	void assignment() {
+		m_compLog.push();
+		final char name = getName();
+		match( '=' );
+		expression();
+		emitLn( "LEA  " + name + "(PC),A0" );
+		emitLn( "MOVE D0,(A0)" );
+		m_compLog.pop();
+	}
+
 	void add() {
-		m_compLog.push( "add()" );
+		m_compLog.push();
 		match( '+' );
 		term();
-		emitLn( "ADD  (SP)+, D0", "add()" );
+		emitLn( "ADD  (SP)+, D0" );
 		m_compLog.pop();
 	}
 
 	void subtract() {
-		m_compLog.push( "subtract()" );
+		m_compLog.push();
 		match( '-' );
 		term();
-		emitLn( "SUB  (SP)+, D0", "subtract()" );
-		emitLn( "NEG  D0", "subtract()" );
+		emitLn( "SUB  (SP)+, D0" );
+		emitLn( "NEG  D0" );
 		m_compLog.pop();
 	}
 
 	void factor() {
-		m_compLog.push( "factor()" );
+		m_compLog.push();
 		if( m_look == '(' ) {
 			match( '(' );
 			expression();
 			match( ')' );
+		} else if( isAlpha( m_look ) ) {
+			ident();
 		} else {
-			emitLn( "MOVE #" + getNum() + ", D0", "factor()" );
+			emitLn( "MOVE #" + getNum() + ", D0" );
+		}
+		m_compLog.pop();
+	}
+
+	void ident() {
+		m_compLog.push();
+		final char name = getName();
+		if( m_look == '(' ) {
+			match( '(' );
+			match( ')' );
+			emitLn( "BSR " + name );
+		} else {
+			emitLn( "MOVE " + name + "(PC), D0" );
 		}
 		m_compLog.pop();
 	}
 
 	void multiply() {
-		m_compLog.push( "multiply()" );
+		m_compLog.push();
 		match( '*' );
 		factor();
-		emitLn( "MULS (SP)+, D0", "multiply()" );
+		emitLn( "MULS (SP)+, D0" );
 		m_compLog.pop();
 	}
 
 	void divide() {
-		m_compLog.push( "divide()" );
+		m_compLog.push();
 		match( '/' );
 		factor();
-		emitLn( "MOVE (SP)+, D1", "divide()" );
-		emitLn( "DIVS D1, D0", "divide()" );
+		emitLn( "MOVE (SP)+, D1" );
+		emitLn( "DIVS D1, D0" );
 		m_compLog.pop();
 	}
 	// {--------------------------------------------------------------}

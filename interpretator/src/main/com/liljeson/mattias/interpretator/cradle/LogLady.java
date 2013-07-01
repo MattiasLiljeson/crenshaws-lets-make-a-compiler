@@ -7,23 +7,28 @@ public class LogLady {
 		NONE, INFO, WARNING, ERROR, SEVERE
 	}
 
+	LogLevels m_printLevel = LogLevels.ERROR;
 	boolean m_printTimeStamp = true;
 
 	public LogLady() {
 		m_printTimeStamp = true;
-		;
 	}
 
-	public LogLady( final boolean p_printTimeStamp ) {
+	public LogLady( final boolean p_printTimeStamp, final LogLevels p_printLevel ) {
 		m_printTimeStamp = p_printTimeStamp;
+		m_printLevel = p_printLevel;
 	}
 
 	void log( final LogLevels p_level, final String p_msg ) {
-		if( m_printTimeStamp ) {
-			System.out.println( new Date().toString() + ", "
-					+ p_level.toString() + ": " );
+
+		if( p_level.compareTo( m_printLevel ) >= 0 ) {
+
+			if( m_printTimeStamp ) {
+				System.out.println( new Date().toString() + ", "
+						+ p_level.toString() + ": " );
+			}
+			System.out.println( p_msg );
 		}
-		System.out.println( p_msg );
 	}
 
 	public void write( final String p_msg ) {

@@ -1,6 +1,9 @@
 package com.liljeson.mattias.interpretator.main;
 
+import com.liljeson.mattias.interpretator.cradle.CompLogger;
 import com.liljeson.mattias.interpretator.cradle.Cradle;
+import com.liljeson.mattias.interpretator.cradle.LogLady;
+import com.liljeson.mattias.interpretator.cradle.LogLady.LogLevels;
 
 /**
  * Implementation of the stack based VM described here:
@@ -22,9 +25,10 @@ public class Runner {
 		// Backend backend = new Backend();
 		// backend.loadProgram( Programs.prog1() );
 		// backend.runProgram();
-
-		final Cradle cradle = new Cradle();
-		cradle.run( "(((1+2)*3)+4)+5" );
+		final LogLady logLady = new LogLady( false, LogLevels.INFO );
+		final CompLogger compLady = new CompLogger( logLady );
+		final Cradle cradle = new Cradle( logLady, compLady );
+		cradle.run( "a=2" );
 
 	}
 }
