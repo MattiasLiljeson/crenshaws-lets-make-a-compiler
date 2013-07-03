@@ -59,10 +59,11 @@ public class Cradle {
 	}
 
 	void match( final char p_char ) {
-		if( m_look == p_char ) {
-			getChar();
+		if( m_look != p_char ) {
+			expected( "\"" + p_char + "\" not: \"" + m_look + "\"" );
 		} else {
-			expected( "\"" + p_char + "\"" );
+			getChar();
+			skipWhite();
 		}
 	}
 
@@ -78,28 +79,50 @@ public class Cradle {
 		return Character.isDigit( p_char );
 	}
 
-	char getName() {
-		// ? returned if look isn't a digit
-		char name = '?';
-		if( !isAlpha( m_look ) ) {
-			expected( "Name" );
-		} else {
-			name = Character.toUpperCase( m_look );
-			getChar();
-		}
-		return name;
+	boolean isAlNum( final char p_char ) {
+		return isAlpha( p_char ) || isDigit( p_char );
 	}
 
-	char getNum() {
-		// ¤ returned if look isn't a digit
-		char num = '¤';
-		if( !isDigit( m_look ) ) {
-			expected( "Integer" );
-		} else {
-			num = m_look;
+	boolean isWhite( final char p_char ) {
+		return p_char == ' ' || p_char == '\t';
+	}
+
+	void skipWhite() {
+		while( isWhite( m_look ) ) {
 			getChar();
 		}
-		return num;
+	}
+
+	String getName() {
+		// ? returned if look isn't a digit
+		String token = "";
+		if( !isAlpha( m_look ) ) {
+			expected( "Name, not: " + m_look );
+		}
+		while( isAlNum( m_look ) ) {
+			token += upCase( m_look );
+			getChar();
+		}
+		skipWhite();
+		return token;
+	}
+
+	char upCase( final char p_char ) {
+		return Character.toUpperCase( p_char );
+	}
+
+	String getNum() {
+		// ¤ returned if look isn't a digit
+		String value = "";
+		if( !isDigit( m_look ) ) {
+			expected( "Integer, not: " + m_look );
+		}
+		while( isDigit( m_look ) ) {
+			value += m_look;
+			getChar();
+		}
+		skipWhite();
+		return value;
 	}
 
 	void emit( final String p_msg ) {
@@ -118,6 +141,7 @@ public class Cradle {
 
 	void init() {
 		getChar();
+		skipWhite();
 	}
 
 	char read() {
@@ -164,7 +188,7 @@ public class Cradle {
 
 	void assignment() {
 		m_compLog.push();
-		final char name = getName();
+		final String name = getName();
 		match( '=' );
 		expression();
 		emitLn( "LEA  " + name + "(PC),A0" );
@@ -205,7 +229,7 @@ public class Cradle {
 
 	void ident() {
 		m_compLog.push();
-		final char name = getName();
+		final String name = getName();
 		if( m_look == '(' ) {
 			match( '(' );
 			match( ')' );

@@ -28,7 +28,7 @@ public class Runner {
 		final LogLady logLady = new LogLady( false, LogLevels.INFO );
 		final CompLogger compLady = new CompLogger( logLady );
 		final Cradle cradle = new Cradle( logLady, compLady );
-		cradle.run( "a=2" );
+		cradle.run( " supervariable = 22 + 23/3" );
 
 	}
 }
