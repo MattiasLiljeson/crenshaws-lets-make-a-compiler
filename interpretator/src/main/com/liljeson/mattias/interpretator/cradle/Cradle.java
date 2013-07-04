@@ -8,6 +8,7 @@ public class Cradle {
 	CompLogger m_compLog = new CompLogger( m_log );
 	Tokenizer m_tokenizer = new Tokenizer( "1+2" );
 	char m_look = '_';
+	int[] table = new int['z'];
 	boolean m_abort = false;
 
 	public Cradle( final LogLady p_log, final CompLogger p_compLog ) {
@@ -22,9 +23,32 @@ public class Cradle {
 	public void run( final String p_program ) {
 		m_tokenizer = new Tokenizer( p_program );
 		init();
-		assignment();
-		if( m_look != '\n' && m_look != '_' ) {
-			expected( "Newline, not: " + m_look );
+
+		do {
+			// m_log.write( new Integer( expression() ).toString() );
+			switch( m_look ) {
+			case '?':
+				input();
+				break;
+			case '!':
+				output();
+				break;
+			default:
+				assignment();
+				break;
+			}
+			newLine();
+		} while( m_look != '.' );
+	}
+
+	void init() {
+		getChar();
+		initTable();
+	}
+
+	void initTable() {
+		for( int i = 0; i < table.length; i++ ) {
+			table[i] = 0;
 		}
 	}
 
@@ -58,11 +82,31 @@ public class Cradle {
 				"; next token read to look: " + Character.toString( m_look ) );
 	}
 
+	void input() {
+		m_compLog.push();
+		match( '?' );
+		table[getName()] = m_log.read();
+		m_compLog.pop();
+	}
+
+	void output() {
+		m_compLog.push();
+		match( '!' );
+		m_log.WriteLn( table[getName()] );
+		m_compLog.pop();
+	}
+
 	void match( final char p_char ) {
 		if( m_look == p_char ) {
 			getChar();
 		} else {
 			expected( "\"" + p_char + "\"" );
+		}
+	}
+
+	void newLine() {
+		if( m_look == '\n' ) {
+			getChar();
 		}
 	}
 
@@ -79,8 +123,8 @@ public class Cradle {
 	}
 
 	char getName() {
-		// ? returned if look isn't a digit
-		char name = '?';
+		// % returned if look isn't a digit
+		char name = '%';
 		if( !isAlpha( m_look ) ) {
 			expected( "Name" );
 		} else {
@@ -90,13 +134,13 @@ public class Cradle {
 		return name;
 	}
 
-	char getNum() {
-		// ¤ returned if look isn't a digit
-		char num = '¤';
+	int getNum() {
+		int num = 0;
 		if( !isDigit( m_look ) ) {
 			expected( "Integer" );
-		} else {
-			num = m_look;
+		}
+		while( isDigit( m_look ) ) {
+			num = num * 10 + Integer.parseInt( ( String.valueOf( m_look ) ) );
 			getChar();
 		}
 		return num;
@@ -116,59 +160,58 @@ public class Cradle {
 		m_log.writeLn();
 	}
 
-	void init() {
-		getChar();
-	}
-
 	char read() {
 		return m_tokenizer.getNextToken().m_token;
 	}
 
-	void term() {
+	int term() {
 		m_compLog.push();
-		factor();
+		int value = factor();
 		while( m_look == '*' || m_look == '/' ) {
-			emitLn( "MOVE D0, -(SP)" );
 			switch( m_look ) {
 			case '*':
-				multiply();
+				match( '*' );
+				value *= factor();
 				break;
 			case '/':
-				divide();
+				match( '/' );
+				value /= factor();
 				break;
 			}
 		}
 		m_compLog.pop();
+		return value;
 	}
 
-	void expression() {
+	int expression() {
 		m_compLog.push();
+		int value;
 		if( isAddop( m_look ) ) {
-			emitLn( "CLR  D0" );
+			value = 0;
 		} else {
-			term();
+			value = term();
 		}
 		while( isAddop( m_look ) ) {
-			emitLn( "MOVE D0, -(SP)" );
 			switch( m_look ) {
 			case '+':
-				add();
+				match( '+' );
+				value += term();
 				break;
 			case '-':
-				subtract();
+				match( '-' );
+				value -= term();
 				break;
 			}
 		}
 		m_compLog.pop();
+		return value;
 	}
 
 	void assignment() {
 		m_compLog.push();
 		final char name = getName();
 		match( '=' );
-		expression();
-		emitLn( "LEA  " + name + "(PC),A0" );
-		emitLn( "MOVE D0,(A0)" );
+		table[name] = expression();
 		m_compLog.pop();
 	}
 
@@ -189,18 +232,20 @@ public class Cradle {
 		m_compLog.pop();
 	}
 
-	void factor() {
+	int factor() {
+		int value;
 		m_compLog.push();
 		if( m_look == '(' ) {
 			match( '(' );
-			expression();
+			value = expression();
 			match( ')' );
 		} else if( isAlpha( m_look ) ) {
-			ident();
+			value = table[getName()]; // ident();
 		} else {
-			emitLn( "MOVE #" + getNum() + ", D0" );
+			value = getNum();
 		}
 		m_compLog.pop();
+		return value;
 	}
 
 	void ident() {

@@ -1,5 +1,8 @@
 package com.liljeson.mattias.interpretator.cradle;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Date;
 
 public class LogLady {
@@ -38,7 +41,24 @@ public class LogLady {
 
 	public void writeLn() {
 		System.out.println( "" );
+	}
 
+	public void WriteLn( final int p_i ) {
+		System.out.println( Integer.toString( p_i ) );
+
+	}
+
+	public int read() {
+		int input = -1;
+		try {
+			final BufferedReader bufferRead = new BufferedReader(
+					new InputStreamReader( System.in ) );
+			input = Integer
+					.parseInt( String.valueOf( (char) bufferRead.read() ) );
+		} catch( final IOException e ) {
+			e.printStackTrace();
+		}
+		return input;
 	}
 
 	// public char read() {
