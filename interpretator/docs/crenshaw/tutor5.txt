@@ -787,7 +787,7 @@ came out like this:
           <expr1>             get initial value
           LEA <ident>(PC),A0  address the loop counter
           SUBQ #1,D0          predecrement it
-          MOVE D0,(A0)        save it
+          MOVED 0,(A0)        save it
           <expr1>             get upper limit
           MOVE D0,-(SP)       save it on stack
 
@@ -865,7 +865,7 @@ Give it a try.  Once again,  don't  forget  to  add  the  call in
 Block.    Since  we don't have any input for the dummy version of
 Expression, a typical input line would look something like
 
-     afi=bece
+     afb=bece
 
 Well, it DOES generate a lot of code, doesn't it?    But at least
 it's the RIGHT code.
